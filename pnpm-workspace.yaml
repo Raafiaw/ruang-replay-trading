@@ -1,0 +1,14 @@
+packages:
+  - '.'
+storeDir: '.sites-runtime/pnpm-store'
+cacheDir: '.sites-runtime/pnpm-cache'
+nodeLinker: hoisted
+enableGlobalVirtualStore: false
+networkConcurrency: 8
+fetchRetries: 2
+fetchTimeout: 600000
+allowBuilds:
+  esbuild: true
+  sharp: true
+  unrs-resolver: true
+  workerd: true
