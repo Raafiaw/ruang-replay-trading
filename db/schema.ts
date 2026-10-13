@@ -1,0 +1,3 @@
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+export const datasets = sqliteTable('datasets', { id: text('id').primaryKey(), name: text('name').notNull(), metadata: text('metadata').notNull(), objectKey: text('object_key').notNull(), published: integer('published').notNull().default(0), createdAt: integer('created_at').notNull() });
+export const sessions = sqliteTable('sessions', { id: text('id').primaryKey(), subject: text('subject').notNull(), payload: text('payload').notNull(), updatedAt: integer('updated_at').notNull() }, table => [index('sessions_subject').on(table.subject)]);

@@ -1,0 +1,1 @@
+export async function readApi<T>(response:Response):Promise<T>{const data:unknown=await response.json();if(!data||typeof data!=='object')throw new Error('Respons server tidak valid.');return data as T;}
