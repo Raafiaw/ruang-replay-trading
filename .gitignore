@@ -54,3 +54,7 @@ next-env.d.ts
 /.codex/
 /outputs/
 /work/
+/pages-dist/
+/public/datasets/catalog.json
+/public/datasets/*.json
+!/public/datasets/sources.json
