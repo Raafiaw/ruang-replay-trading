@@ -4,6 +4,7 @@ import { createChart, CandlestickSeries, HistogramSeries, LineSeries, ColorType,
 import type { IChartApi, ISeriesApi, UTCTimestamp } from 'lightweight-charts';
 import type { Candle, Position, SymbolSpec } from '@/lib/engine';
 import {alignPlot} from '@/lib/engine';
+import { timeframeBucket, timeframeDescription } from '@/lib/timeframes';
 import type { PineResult } from '@/lib/pine';
 export type Tool = 'cursor' | 'horizontal' | 'vertical' | 'trend' | 'rectangle' | 'text' | 'fib' | 'risk';
 export type Anchor = {
@@ -50,6 +51,7 @@ export default function TradingChart(props: Props) {
     useEffect(() => { if (!api.current || !candle.current || !volume.current)
         return; candle.current.applyOptions({ priceFormat: { type: 'price', precision: props.symbol.digits, minMove: props.symbol.tickSize } }); candle.current.setData(props.bars.map(b => ({ ...b, time: b.time as UTCTimestamp }))); volume.current.setData(props.bars.map(b => ({ time: b.time as UTCTimestamp, value: b.volume, color: b.close >= b.open ? '#36d6b51e' : '#ef7c881e' }))); if (changedDataset.current !== props.datasetId + props.minutes) {
         changedDataset.current = props.datasetId + props.minutes;
+        setHover(null);
         api.current.timeScale().setVisibleLogicalRange({ from: Math.max(0, props.bars.length - 85), to: props.bars.length + 7 });
     } setRevision(x => x + 1); }, [props.bars, props.datasetId, props.minutes, props.symbol]);
     useEffect(() => { const chart = api.current; if (!chart)
@@ -63,7 +65,7 @@ export default function TradingChart(props: Props) {
         out.push(series.createPriceLine({ price: p.tp, color: '#36d6b5', lineWidth: 1, lineStyle: 2, title: 'TP' })); return out; }); return () => lines.forEach(l => series.removePriceLine(l)); }, [props.positions]);
     const width = size.width - 72, height = size.height - 28;
     const xy = (a: Anchor) => { void revision; const chart = api.current, series = candle.current; if (!chart || !series)
-        return null; const time = props.minutes===props.baseMinutes?a.time:Math.floor(a.time / (props.minutes * 60)) * props.minutes * 60; let x = chart.timeScale().timeToCoordinate(time as UTCTimestamp); if (x === null) {
+        return null; const time = props.minutes===props.baseMinutes?a.time:timeframeBucket(a.time, props.minutes); let x = chart.timeScale().timeToCoordinate(time as UTCTimestamp); if (x === null) {
         const bars = props.bars, index = bars.findIndex(b => b.time >= time);
         if (index >= 0)
             x = chart.timeScale().logicalToCoordinate(index as any);
@@ -114,7 +116,7 @@ export default function TradingChart(props: Props) {
     } };
     const shown = hover ?? props.bars.at(-1);
     const all = [...props.drawings.filter(d => d.id !== draft?.id), ...(draft ? [draft] : [])];
-    return <div className="chart-shell"><div className="chart-legend"><strong>{props.symbol.symbol}</strong><span>· {props.minutes >= 60 ? `${props.minutes / 60} jam` : `${props.minutes} menit`}</span><span className="legend-badge">OHLC · BID</span>{shown && <div className="ohlc">O <b>{shown.open.toFixed(props.symbol.digits)}</b> H <b>{shown.high.toFixed(props.symbol.digits)}</b> L <b>{shown.low.toFixed(props.symbol.digits)}</b> C <b className={shown.close >= shown.open ? 'positive' : 'negative'}>{shown.close.toFixed(props.symbol.digits)}</b></div>}</div><div ref={host} className="chart-host"/><svg className={`draw-layer ${props.tool === 'cursor' ? 'pass' : 'drawing'}`} width={Math.max(1, width)} height={Math.max(1, height)} onPointerDown={down} onPointerMove={move} onPointerUp={up} aria-label="Lapisan alat gambar">{all.map(d => { const a = xy(d.a), b = xy(d.b); if (!a || !b)
+    return <div className="chart-shell"><div className="chart-legend"><strong>{props.symbol.symbol}</strong><span>· {timeframeDescription(props.minutes)}</span><span className="legend-badge">OHLC · BID</span>{shown && <div className="ohlc">O <b>{shown.open.toFixed(props.symbol.digits)}</b> H <b>{shown.high.toFixed(props.symbol.digits)}</b> L <b>{shown.low.toFixed(props.symbol.digits)}</b> C <b className={shown.close >= shown.open ? 'positive' : 'negative'}>{shown.close.toFixed(props.symbol.digits)}</b></div>}</div><div ref={host} className="chart-host"/><svg className={`draw-layer ${props.tool === 'cursor' ? 'pass' : 'drawing'}`} width={Math.max(1, width)} height={Math.max(1, height)} onPointerDown={down} onPointerMove={move} onPointerUp={up} aria-label="Lapisan alat gambar">{all.map(d => { const a = xy(d.a), b = xy(d.b); if (!a || !b)
         return null; const selected = props.selected === d.id, color = selected ? '#c5dcff' : d.color; const hit = (part: 'a' | 'b' | 'move') => (e: React.PointerEvent<SVGElement>) => begin(e, d.id, part); let shape: React.ReactNode; if (d.type === 'horizontal')
         shape = <line x1="0" x2={width} y1={a.y} y2={a.y}/>;
     else if (d.type === 'vertical')
