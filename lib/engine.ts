@@ -1,3 +1,5 @@
+import { canAggregate, timeframeBucket } from './timeframes.ts';
+
 export type Candle = {
     time: number;
     open: number;
@@ -117,9 +119,9 @@ export function parseMT5(text: string, options: ImportOptions) { if (text.length
     throw new Error('Maksimal 50.000 candle per dataset.'); let gaps = 0; for (let i = 1; i < candles.length; i++)
     if (candles[i].time - candles[i - 1].time > options.minutes * 60)
         gaps++; return { candles, issues, duplicates, gaps }; }
-export function aggregate(candles: Candle[], base: number, target: number, knownIndex: number) { if (target < base || target % base !== 0)
+export function aggregate(candles: Candle[], base: number, target: number, knownIndex: number) { if (!canAggregate(base, target))
     throw new Error('Timeframe harus kelipatan timeframe dasar; candle lebih kecil tidak dibuat.'); if(target===base)return candles.slice(0,knownIndex+1).map(b=>({...b}));const out: Candle[] = []; for (const b of candles.slice(0, knownIndex + 1)) {
-    const time = Math.floor(b.time / (target * 60)) * target * 60;
+    const time = timeframeBucket(b.time, target);
     const last = out.at(-1);
     if (last?.time === time) {
         last.high = Math.max(last.high, b.high);
@@ -131,11 +133,11 @@ export function aggregate(candles: Candle[], base: number, target: number, known
     else
         out.push({ ...b, time });
 } return out; }
-export function sampleDataset(): Dataset { let seed = 4817; const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; const candles: Candle[] = []; let close = 1.0842; for (let i = 0; i < 720; i++) {
-    const open = close, drift = Math.sin(i / 28) * 0.000075;
-    close = +(open + (rand() - .5) * .0005 + drift).toFixed(5);
-    candles.push({ time: Date.UTC(2026, 8, 7) / 1000 + i * 300, open, high: +(Math.max(open, close) + rand() * .00021).toFixed(5), low: +(Math.min(open, close) - rand() * .00021).toFixed(5), close, volume: Math.round(40 + rand() * 320), spread: 10 });
-} return { id: 'sample-eurusd', name: 'EURUSD · Latihan September', symbol: { ...EURUSD }, minutes: 5, timezone: 'UTC', candles, sample: true }; }
+export function sampleDataset(minutes: 1 | 5 = 5): Dataset { let seed = 4817; const rand = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; const candles: Candle[] = []; let close = 1.0842; for (let i = 0; i < (minutes === 1 ? 14400 : 720); i++) {
+    const open = close, drift = Math.sin(i / 28) * (minutes === 1 ? 0.000005 : 0.000075);
+    close = +(open + (rand() - .5) * (minutes === 1 ? .0001 : .0005) + drift).toFixed(5);
+    candles.push({ time: Date.UTC(2026, 8, 7) / 1000 + i * minutes * 60, open, high: +(Math.max(open, close) + rand() * .00021).toFixed(5), low: +(Math.min(open, close) - rand() * .00021).toFixed(5), close, volume: Math.round(40 + rand() * 320), spread: 10 });
+} return { id: minutes === 1 ? 'sample-eurusd-m1' : 'sample-eurusd', name: minutes === 1 ? 'EURUSD · Contoh M1 (sintetis)' : 'EURUSD · Latihan September', symbol: { ...EURUSD }, minutes, timezone: 'UTC', candles, sample: true }; }
 export type Config = {
     initial: number;
     currency: string;
@@ -322,4 +324,4 @@ export function report(a: Account, c: Config) { const wins = a.trades.filter(t =
 export function csv(rows: Record<string, unknown>[]) { if (!rows.length)
     return ''; const keys = Object.keys(rows[0]); const cell = (x: unknown) => '"' + String(x ?? '').replace(/"/g, '""') + '"'; return '\uFEFF' + [keys.map(cell).join(','), ...rows.map(r => keys.map(k => cell(r[k])).join(','))].join('\r\n'); }
 
-export function alignPlot(points:{time:number;value:number}[],base:number,target:number,knownTime:number){const values=new Map<number,{time:number;value:number}>();for(const p of points){if(p.time>knownTime)continue;const time=target===base?p.time:Math.floor(p.time/(target*60))*target*60;values.set(time,{time,value:p.value});}return [...values.values()].sort((a,b)=>a.time-b.time);}
+export function alignPlot(points:{time:number;value:number}[],base:number,target:number,knownTime:number){const values=new Map<number,{time:number;value:number}>();for(const p of points){if(p.time>knownTime)continue;const time=target===base?p.time:timeframeBucket(p.time,target);values.set(time,{time,value:p.value});}return [...values.values()].sort((a,b)=>a.time-b.time);}
