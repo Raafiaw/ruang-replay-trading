@@ -1,0 +1,12 @@
+import './sites-env.mjs';
+import { existsSync, renameSync, writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { buildDatasets } from './pages-datasets.mjs';
+const catalog = buildDatasets();
+const { build } = await import('vite');
+await build({ configFile: fileURLToPath(new URL('../vite.pages.config.ts', import.meta.url)) });
+const generatedIndex = new URL('../pages-dist/pages/index.html', import.meta.url);
+if (!existsSync(generatedIndex)) throw new Error('HTML hasil build tidak ditemukan.');
+renameSync(generatedIndex, new URL('../pages-dist/index.html', import.meta.url));
+writeFileSync(new URL('../pages-dist/.nojekyll', import.meta.url), '');
+console.log(`GitHub Pages siap: ${catalog.length} dataset publik, tanpa server Cloudflare.`);

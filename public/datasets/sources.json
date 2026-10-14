@@ -1,0 +1,16 @@
+{
+  "datasets": [{
+    "id": "sample-eurusd",
+    "name": "EURUSD · Latihan September (sintetis)",
+    "file": "contoh-sintetis.csv",
+    "minutes": 5,
+    "timezone": "UTC",
+    "duplicate": "reject",
+    "sample": true,
+    "symbol": {
+      "symbol": "EURUSD", "digits": 5, "tickSize": 0.00001,
+      "point": 0.00001, "pip": 0.0001, "contractSize": 100000,
+      "quoteCurrency": "USD", "minLot": 0.01, "maxLot": 100, "lotStep": 0.01
+    }
+  }]
+}
